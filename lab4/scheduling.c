@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "queue.h" // MAKE SURE TO COMPILE THIS TOGETHER!
 
 #define NUM_PROCESSES 20
 #define NUM_SCHEDULERS 4
@@ -90,6 +91,8 @@ int main()
   /* Run simulation for each scheduler */
   for (i = 0; i < NUM_SCHEDULERS; i++)
   {
+    initQueue(&rrQueue); // I ADDED THIS
+
     int num_finished = 0;
     int current_time = 0;
     int prev_pid = -1;
@@ -175,62 +178,76 @@ int main()
 
 int first_come_first_served(process proc[], int t)
 {
-  int i, minIndex;
-  if (proc[0].arrivaltime != NULL)
-  {
-    minIndex = 0;
-  }
+  int i;
+  int minIndex = -1;
 
   // Find the min arrival time and return it
-  for (i = 1; i < NUM_PROCESSES; i++)
+  for (i = 0; i < NUM_PROCESSES; i++)
   {
-    if (proc[i].arrivaltime != NULL && proc[i].arrivaltime <= t && proc[i].finished == 0 && proc[i].arrivaltime < proc[minIndex].arrivaltime)
+    if (proc[i].arrivaltime <= t && proc[i].finished == 0)
     {
-      minIndex = i;
+      if (minIndex == -1 || proc[i].arrivaltime < proc[minIndex].arrivaltime)
+      {
+        minIndex = i;
+      }
     }
   }
 
-  if (minIndex != NULL)
-  {
-    return minIndex;
-  }
-
-  return -1;
+  return minIndex;
 }
 
 int shortest_remaining_time(process proc[], int t)
 {
-  /* TODO: Implement scheduling algorithm here */
-  int i, minIndex;
-  if (proc[0].runtime != NULL)
-  {
-    minIndex = 0;
-  }
+  int i;
+  int minIndex = -1;
 
-  // Find the min arrival time and return it
-  for (i = 1; i < NUM_PROCESSES; i++)
+  // Find the min remaining time and return it
+  for (i = 0; i < NUM_PROCESSES; i++)
   {
-    if (proc[i].runtime != NULL && proc[i].arrivaltime <= t && proc[i].finished == 0 && proc[i].runtime < proc[minIndex].runtime)
+    if (proc[i].arrivaltime <= t && proc[i].finished == 0)
     {
-      minIndex = i;
+      // Compare remainingtime, not runtime, for SRT
+      if (minIndex == -1 || proc[i].remainingtime < proc[minIndex].remainingtime)
+      {
+        minIndex = i;
+      }
     }
   }
 
-  if (minIndex != NULL)
-  {
-    return minIndex;
-  }
-
-  return -1;
+  return minIndex;
 }
 
-int rrQueue[NUM_PROCESSES];
+Queue rrQueue;
 
 int round_robin(process proc[], int t)
 {
-  /* TODO: Implement scheduling algorithm here */
-  // HINT: consider using a static variable to keep track of the previously scheduled process
-  return -1;
+  int i;
+  int process = -1;
+
+  // Check if process has arrived and enqueue it
+  for (i = 0; i < NUM_PROCESSES; i++)
+  {
+    if (proc[i].arrivaltime == t)
+    {
+      enqueue(&rrQueue, i);
+    }
+  }
+
+  if (isEmpty(&rrQueue))
+    return -1;
+
+  // dequeue front process
+  while (1)
+  {
+    process = dequeue(&rrQueue);
+    if (proc[process].finished != 0)
+    {
+      enqueue(&rrQueue, process);
+      break;
+    }
+  }
+
+  return process;
 }
 
 int round_robin_priority(process proc[], int t)
