@@ -14,6 +14,10 @@
 #define NUM_SCHEDULERS 4
 
 #define SCHEDULER_NAME_LEN 30
+#define NUM_PRIORITIES 3
+
+Queue rrQueue;
+Queue priorityQueue[NUM_PRIORITIES]; 
 
 /* Defines a simulated process */
 typedef struct process
@@ -91,8 +95,14 @@ int main()
   /* Run simulation for each scheduler */
   for (i = 0; i < NUM_SCHEDULERS; i++)
   {
-    initQueue(&rrQueue); // I ADDED THIS
-
+    // === I ADDED THIS === 
+    initQueue(&rrQueue); 
+    int j;
+    for (j = 0; j < NUM_PRIORITIES; j++) {
+      initQueue(&priorityQueue[j]);
+    }
+    // === ===
+    
     int num_finished = 0;
     int current_time = 0;
     int prev_pid = -1;
@@ -217,41 +227,75 @@ int shortest_remaining_time(process proc[], int t)
   return minIndex;
 }
 
-Queue rrQueue;
 
 int round_robin(process proc[], int t)
 {
-  int i;
-  int process = -1;
+    static int current_pid = -1;
+    static int time_on_cpu = 0;
+    int quantum = 50;
+    int i;
 
-  // Check if process has arrived and enqueue it
-  for (i = 0; i < NUM_PROCESSES; i++)
-  {
-    if (proc[i].arrivaltime == t)
-    {
-      enqueue(&rrQueue, i);
+    for (i = 0; i < NUM_PROCESSES; i++) {
+        if (proc[i].arrivaltime == t) {
+            enqueue(&rrQueue, i);
+        }
     }
-  }
 
-  if (isEmpty(&rrQueue))
-    return -1;
+    if (current_pid != -1) {
+        time_on_cpu++;
 
-  // dequeue front process
-  while (1)
-  {
-    process = dequeue(&rrQueue);
-    if (proc[process].finished != 0)
-    {
-      enqueue(&rrQueue, process);
-      break;
+        if (proc[current_pid].finished || time_on_cpu >= quantum) {
+            
+            if (!proc[current_pid].finished) {
+                enqueue(&rrQueue, current_pid);
+            }
+            
+            current_pid = -1;
+            time_on_cpu = 0;
+        }
     }
-  }
 
-  return process;
+    if (current_pid == -1) {
+        if (!isEmpty(&rrQueue)) {
+            current_pid = dequeue(&rrQueue);
+            time_on_cpu = 0;
+        } else {
+            return -1;
+        }
+    }
+
+    return current_pid;
 }
 
 int round_robin_priority(process proc[], int t)
 {
-  /* TODO: Implement scheduling algorithm here */
+  int i; 
+  int process = -1;
+
+  // Check if process has arrived and enqueue it in proper queue 
+  for (i = 0; i < NUM_PROCESSES; i++) 
+  {
+    int priority = proc[i].priority;
+
+    if (proc[i].arrivaltime == t) 
+    {
+      enqueue(&priorityQueue[priority], i);
+    }
+  }
+
+  // dequeue front process depending on priority
+  for (i = NUM_PRIORITIES - 1; i >= 0; i--) 
+  {
+    while (!isEmpty(&priorityQueue[i])) 
+    {
+      process = dequeue(&priorityQueue[i]);
+      if (proc[process].finished == 0)
+      {
+        enqueue(&priorityQueue[i], process);
+        return process;
+      }
+    }
+  }
+  
   return -1;
 }
