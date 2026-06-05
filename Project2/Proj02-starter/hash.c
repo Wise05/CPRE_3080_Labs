@@ -41,6 +41,7 @@ int kv_put(hash_table_t *table, const char *key, const char *val, int ttl) {
     while (curr) {
         if (strcmp(curr->key, key) == 0) {
             strncpy(curr->value, val, MAX_VAL_LEN);
+            curr->value[MAX_VAL_LEN] = '\0';
             curr->expires_at = expires_at;
             atomic_fetch_add(&table->puts, 1);
             pthread_rwlock_unlock(&table->rwlock);
@@ -52,7 +53,9 @@ int kv_put(hash_table_t *table, const char *key, const char *val, int ttl) {
     // Key not found: Create new entry
     kv_entry_t *new_node = malloc(sizeof(kv_entry_t));
     strncpy(new_node->key, key, MAX_KEY_LEN);
+    new_node->key[MAX_KEY_LEN] = '\0';
     strncpy(new_node->value, val, MAX_VAL_LEN);
+    new_node->value[MAX_VAL_LEN] = '\0';
     new_node->expires_at = expires_at;
     new_node->next = table->buckets[idx];
     table->buckets[idx] = new_node;
